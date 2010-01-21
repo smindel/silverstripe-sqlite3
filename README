@@ -17,20 +17,20 @@ Installation
 copy the sqlite3 folder to your project root so that it becomes a sibling of cms, sapphire and co
 add this to your _config.php
 
-	define('SS_DATABASE_CLASS','SQLite3Database');
+	define('SS_DATABASE_CLASS','SQLiteDatabase');
 
 you are done!
 
 
 Config
 ------
-you can set the path for storing your SQLite db file or make use of the :memory: feature like this:
+you can set the path for storing your SQLite db file or make use of the :memory: feature in sqlite3/_config.php like this:
 
 	$databaseConfig = array(
 		'path' => '/some/path',
 		'memory' => true,
 	);
-	
+
 make sure the webserver has sufficient privileges to write to that folder and that it is protected from external access.
 
 
