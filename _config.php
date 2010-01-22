@@ -5,8 +5,8 @@ if(defined('SS_DATABASE_CLASS') && (SS_DATABASE_CLASS == 'SQLiteDatabase' || SS_
 	global $databaseConfig;
 	$databaseConfig = array(
 		'database' => (defined('SS_DATABASE_PREFIX') ? SS_DATABASE_PREFIX : '') . $database . (defined('SS_DATABASE_SUFFIX') ? SS_DATABASE_SUFFIX : ''),
-		'path' => defined('SS_SQLITE_DATABASE_PATH') && SS_SQLITE_DATABASE_PATH ? SS_SQLITE_DATABASE_PATH : ASSETS_PATH,
-		'memory' => true,
+		'path' => defined('SS_SQLITE_DATABASE_PATH') && SS_SQLITE_DATABASE_PATH ? SS_SQLITE_DATABASE_PATH : ASSETS_PATH,   // where to put the database file
+		'memory' => true,    // run tests in memory
 	);
 
 	// The SQLite3 class is available in PHP 5.3 and newer

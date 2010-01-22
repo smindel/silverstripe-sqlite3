@@ -44,6 +44,11 @@ class SQLite3Database extends SS_Database {
 	 */
 	protected $supportsTransactions=false;
 
+	/*
+	 * if we're on a In-Memory db
+	 */
+	protected $lives_in_memory = false;
+
 	/**
 	 * Connect to a SQLite3 database.
 	 * @param array $parameters An map of parameters, which should include:
@@ -53,17 +58,35 @@ class SQLite3Database extends SS_Database {
 	 *  - memory: use the faster In-Memory database for unit tests
 	 */
 	public function __construct($parameters) {
+		$this->used(__FUNCTION__);
 		//We will store these connection parameters for use elsewhere (ie, unit tests)
 		$this->parameters=$parameters;
 		$this->connectDatabase();
 
 		$this->database_original=$this->database;
 	}
+	
+	public static $used = array();
+	function __destruct() {
+		$this->used(__FUNCTION__);
+		foreach(get_class_methods(__CLASS__) as $m) if(empty(self::$used[$m])) self::$used[$m] = 0;
+		ksort(self::$used);
+		aDebug(self::$used);
+		aDebug('destructed');
+	}
+	function used($f) {
+		if(empty(self::$used[$f])) {
+			self::$used[$f]=1;
+		} else {
+			self::$used[$f]++;
+		}
+	}
 
 	/*
 	 * Uses whatever connection details are in the $parameters array to connect to a database of a given name
 	 */
 	function connectDatabase(){
+		$this->used(__FUNCTION__);
 
 		$this->enum_map = array();
 
@@ -75,7 +98,12 @@ class SQLite3Database extends SS_Database {
 		$file = $parameters['path'] . '/' . $dbName;
 
 		// use the very lightspeed SQLite In-Memory feature for testing
-		if(SapphireTest::using_temp_db()) $file = ':memory:';
+		if(SapphireTest::using_temp_db() && $parameters['memory']) {
+			$file = ':memory:';
+			$this->lives_in_memory = true;
+		} else {
+			$this->lives_in_memory = false;
+		}
 
 		$this->dbConn = new SQLite3($file, SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE, $parameters['key']);
 
@@ -95,6 +123,7 @@ class SQLite3Database extends SS_Database {
 	 * Not implemented, needed for PDO
 	 */
 	public function getConnect($parameters) {
+		$this->used(__FUNCTION__);
 		return null;
 	}
 
@@ -104,6 +133,7 @@ class SQLite3Database extends SS_Database {
 	 * @return boolean
 	 */
 	public function supportsCollations() {
+		$this->used(__FUNCTION__);
 		return true;
 	}
 
@@ -118,6 +148,7 @@ class SQLite3Database extends SS_Database {
 	 * @return float
 	 */
 	public function getVersion() {
+		$this->used(__FUNCTION__);
 		if(!$this->sqliteVersion) {
 			$db_version=$this->query("SELECT sqlite_version()")->value();
 
@@ -131,10 +162,12 @@ class SQLite3Database extends SS_Database {
 	 * @return string
 	 */
 	public function getDatabaseServer() {
+		$this->used(__FUNCTION__);
 		return "sqlite";
 	}
 
 	public function query($sql, $errorLevel = E_USER_ERROR) {
+		$this->used(__FUNCTION__);
 
 		if(isset($_REQUEST['previewwrite']) && in_array(strtolower(substr($sql,0,strpos($sql,' '))), array('insert','update','delete','replace'))) {
 			Debug::message("Will execute: $sql");
@@ -169,6 +202,7 @@ class SQLite3Database extends SS_Database {
 	}
 
 	public function getGeneratedID($table) {
+		$this->used(__FUNCTION__);
 		return $this->dbConn->lastInsertRowID();
 	}
 
@@ -179,12 +213,14 @@ class SQLite3Database extends SS_Database {
 	 * @return int
 	 */
 	public function getNextID($table) {
+		$this->used(__FUNCTION__);
 		user_error('getNextID is OBSOLETE (and will no longer work properly)', E_USER_WARNING);
 		$result = $this->query("SELECT MAX(ID)+1 FROM \"$table\"")->value();
 		return $result ? $result : 1;
 	}
 
 	public function isActive() {
+		$this->used(__FUNCTION__);
 		return $this->active ? true : false;
 	}
 
@@ -193,6 +229,7 @@ class SQLite3Database extends SS_Database {
 	 * So you need to have called $this->selectDatabase() first, or used the __construct method
 	 */
 	public function createDatabase() {
+		$this->used(__FUNCTION__);
 
 		$this->dbConn = null;
 		$fullpath = $this->parameters['path'] . '/' . $this->database;
@@ -207,6 +244,7 @@ class SQLite3Database extends SS_Database {
 	 * Use with caution.
 	 */
 	public function dropDatabase() {
+		$this->used(__FUNCTION__);
 		//First, we need to switch back to the original database so we can drop the current one
 		$this->dbConn = null;
 		$db_to_drop=$this->database;
@@ -221,6 +259,7 @@ class SQLite3Database extends SS_Database {
 	 * Returns the name of the currently selected database
 	 */
 	public function currentDatabase() {
+		$this->used(__FUNCTION__);
 		return $this->database;
 	}
 
@@ -229,6 +268,7 @@ class SQLite3Database extends SS_Database {
 	 * If the database doesn't exist, you should call createDatabase() after calling selectDatabase()
 	 */
 	public function selectDatabase($dbname) {
+		$this->used(__FUNCTION__);
 		$this->database=$dbname;
 
 		$this->tableList = $this->fieldList = $this->indexList = null;
@@ -241,6 +281,7 @@ class SQLite3Database extends SS_Database {
 	 * Returns true if the named database exists.
 	 */
 	public function databaseExists($name) {
+		$this->used(__FUNCTION__);
 		$SQL_name=Convert::raw2sql($name);
 		$result=$this->query("PRAGMA database_list");
 		foreach($result as $db) if($db['name'] == 'main' && preg_match('/\/' . $name . '/', $db['file'])) return true;
@@ -248,95 +289,19 @@ class SQLite3Database extends SS_Database {
 		return false;
 	}
 
-	static protected $supported_field_types = array('boolean', 'int', 'date', 'decimal', 'double', 'enum', 'float', 'int', 'ss_datetime', 'text', 'time', 'varchar', 'year', 'IdColumn');
-
-	/**
-	 * Generate the following table in the database, modifying whatever already exists
-	 * as necessary.
-	 * @todo Change detection for CREATE TABLE $options other than "Engine"
-	 * 
-	 * @param string $table The name of the table
-	 * @param string $fieldSchema A list of the fields to create, in the same form as DataObject::$db
-	 * @param string $indexSchema A list of indexes to create. See {@link requireIndex()}
-	 * @param array $options
-	 */
-	function requireTable($table, $fieldSchema = null, $indexSchema = null, $hasAutoIncPK=true, $options = false, $extensions=false) {
-
-		$targetFields['ID'] = $this->IdColumn();
-		
-		if($fieldSchema) {
-			foreach($fieldSchema as $fieldName => $fieldSpec) {
-				
-				//Is this an array field?
-				$arrayValue='';
-				if(strpos($fieldSpec, '[')!==false){
-					//If so, remove it and store that info separately
-					$pos=strpos($fieldSpec, '[');
-					$arrayValue=substr($fieldSpec, $pos);
-					$fieldSpec=substr($fieldSpec, 0, $pos);
-				}
-
-				$fieldObj = eval(ViewableData::castingObjectCreator($fieldSpec));
-
-				$check = $fieldObj->class;
-				$contrainfunction = false;
-				while(!$contrainfunction) {
-					if(array_search(strtolower($check), self::$supported_field_types) !== false && method_exists($this, $check)) $contrainfunction = $check;
-					$check = get_parent_class($check);
-					if($check == 'DBField') break;
-				}
-				if(!$contrainfunction) user_error('SQLQuery::requireTable(): Unrecognised data type ' . $fieldObj->class, E_USER_ERROR);
-				$targetFields[$fieldName] = call_user_func(array($this, $contrainfunction), array('table' => $table) + self::cast($fieldObj));
-			}
-		}
-
-		if(!isset($this->tableList[strtolower($table)])) {
-			$this->createTable($table, $targetFields, null, $options, $extensions);
-			$this->alterationMessage("Table $table: created","created");
-		} else {
-			$currentFields = $this->fieldList($table);
-			$fieldschanged = false;
-			foreach($targetFields as $f => $c) {
-				if(empty($currentFields[$f])) {
-					$this->alterationMessage("Field $table.$f: created as $c","created");
-					$fieldschanged = true;
-				} else if($currentFields[$f] != $c) {
-					$this->alterationMessage("Field $table.$f: changed to $c <i style=\"color: #AAA\">(from {$currentFields[$f]})</i>","changed");
-					$fieldschanged = true;
-				}
-			}
-			if($fieldschanged) {
-				$this->changeTable($table, $currentFields, $targetFields);
-				$this->alterationMessage("Table $table: changed","changed");
-			}
-		}
-
-		// Create custom indexes
-		if($indexSchema) {
-			foreach($indexSchema as $indexName => $indexDetails) {
-				$this->createIndex($table, $indexName, $indexDetails);
-			}
-		}
-
-	}
-	
-	private static function cast($obj) {
-		foreach((Array)$obj as $key => $val) $arr[str_replace("\0*\0",'',$key)] = $val;
-		return $arr;
-	}
-
 	public function clearTable($table) {
+		$this->used(__FUNCTION__);
 		$this->dbConn->query("DELETE FROM \"$table\"");
 	}
 
 	public function createTable($table, $fields = null, $indexes = null, $options = null, $advancedOptions = null) {
+		$this->used(__FUNCTION__);
 
-		if(!isset($fields['ID'])) $fields['ID'] = "INTEGER PRIMARY KEY AUTOINCREMENT";
+		if(!isset($fields['ID'])) $fields['ID'] = $this->IdColumn();
 
 		$fieldSchemata = array();
 		if($fields) foreach($fields as $k => $v) {
 			$fieldSchemata[] = "\"$k\" $v";
-			$this->alterationMessage("Field $table.$k: created as $v","created");
 		}
 		$fieldSchemas = implode(",\n",$fieldSchemata);
 
@@ -346,52 +311,44 @@ class SQLite3Database extends SS_Database {
 			$fieldSchemas
 		)");
 
+		if($indexes) {
+			foreach($indexes as $indexName => $indexDetails) {
+				$this->createIndex($table, $indexName, $indexDetails);
+			}
+		}
+
 		return $table;
 	}
 
-    /**
-     * Alter a table's schema.
-     * @param $table The name of the table to alter
-     * @param $newFields New fields, a map of field name => field schema
-     * @param $newIndexes New indexes, a map of index name => index type
-     * @param $alteredFields Updated fields, a map of field name => field schema
-     * @param $alteredIndexes Updated indexes, a map of index name => index type
-     */
-    public function alterTable($tableName, $newFields = null, $newIndexes = null, $alteredFields = null, $alteredIndexes = null, $alteredOptions = null, $advancedOptions = null) {
+	/**
+	 * Alter a table's schema.
+	 * @param $table The name of the table to alter
+	 * @param $newFields New fields, a map of field name => field schema
+	 * @param $newIndexes New indexes, a map of index name => index type
+	 * @param $alteredFields Updated fields, a map of field name => field schema
+	 * @param $alteredIndexes Updated indexes, a map of index name => index type
+	 */
+	public function alterTable($tableName, $newFields = null, $newIndexes = null, $alteredFields = null, $alteredIndexes = null, $alteredOptions = null, $advancedOptions = null) {
+		$this->used(__FUNCTION__);
 
-         if($newFields) foreach($newFields as $fieldName => $fieldSpec) $this->createField($tableName, $fieldName, $fieldSpec);
-         
-         if($alteredFields) foreach($alteredFields as $fieldName => $fieldSpec) $this->alterField($tableName, $fieldName, $fieldSpec);
-         
-         if($newIndexes) foreach($newIndexes as $indexName => $indexSpec) $this->createIndex($tableName, $indexName, $indexSpec);
+		if($newFields) foreach($newFields as $fieldName => $fieldSpec) $this->createField($tableName, $fieldName, $fieldSpec);
 
-         if($alteredIndexes) foreach($alteredIndexes as $indexName => $indexSpec) $this->alterIndex($tableName, $indexName, $indexSpec);
-         
-    }
-    
-	public function changeTable($table, $currentFields, $targetFields) {
+		if($alteredFields) foreach($alteredFields as $fieldName => $fieldSpec) $this->alterField($tableName, $fieldName, $fieldSpec);
 
-		$newFields = array_merge($currentFields, $targetFields);
-		foreach($newFields as $f => $c) $newFieldSpecs[] = "\"$f\" $c";
+		if($newIndexes) foreach($newIndexes as $indexName => $indexSpec) $this->createIndex($tableName, $indexName, $indexSpec);
 
-		$queries = array(
-			"BEGIN TRANSACTION",
-			"CREATE TABLE \"{$table}_new\"(" . implode(',', $newFieldSpecs) . ")",
-			"INSERT INTO \"{$table}_new\" (\"" . (implode('","', array_keys($currentFields))) . "\") SELECT \"" . (implode('","', array_keys($currentFields))) . "\" FROM \"$table\"",
-			"DROP TABLE \"$table\"",
-			"ALTER TABLE \"{$table}_new\" RENAME TO \"$table\"",
-			"COMMIT"
-		);
-
-		foreach($queries as $query) $this->query($query.';');
+		if($alteredIndexes) foreach($alteredIndexes as $indexName => $indexSpec) $this->alterIndex($tableName, $indexName, $indexSpec);
 
 	}
-
+    
 	public function renameTable($oldTableName, $newTableName) {
+		$this->used(__FUNCTION__);
 
 		$this->query("ALTER TABLE \"$oldTableName\" RENAME \"$newTableName\"");
 
 	}
+
+	protected static $checked_and_repaired = false;
 
 	/**
 	 * Repairs and reindexes the table.  This might take a long time on a very large table.
@@ -399,22 +356,23 @@ class SQLite3Database extends SS_Database {
 	 * @return boolean Return true if the table has integrity after the method is complete.
 	 */
 	public function checkAndRepairTable($tableName) {
-		// it's a pitty, vacuuming doesn't work -> locking issue
-		// $this->runTableCheckCommand("VACUUM"); 
-		return true;
-	}
+		$this->used(__FUNCTION__);
 
-	/**
-	 * Helper function used by checkAndRepairTable.
-	 * @param string $sql Query to run.
-	 * @return boolean Returns true no matter what; we're not currently checking the status of the command
-	 */
-	protected function runTableCheckCommand($sql) {
-		$testResults = $this->query($sql);
-		return true;
+		$ok = true;
+
+		if(!SapphireTest::using_temp_db() && !self::$checked_and_repaired) {
+			$this->alterationMessage("Checking database integrity","repaired");
+			if($msgs = $this->query('PRAGMA integrity_check')) foreach($msgs as $msg) if($msg['integrity_check'] != 'ok') { Debug::show($msg['integrity_check']); $ok = false; }
+			$this->query('VACUUM');
+			$this->alterationMessage("VACUUMing","repaired");
+			self::$checked_and_repaired = true;
+		}
+		
+		return $ok;
 	}
 
 	public function createField($tableName, $fieldName, $fieldSpec) {
+		$this->used(__FUNCTION__);
 		$this->query("ALTER TABLE \"$tableName\" ADD \"$fieldName\" $fieldSpec");
 	}
 
@@ -425,6 +383,7 @@ class SQLite3Database extends SS_Database {
 	 * @param string $fieldSpec The new field specification
 	 */
 	public function alterField($tableName, $fieldName, $fieldSpec) {
+		$this->used(__FUNCTION__);
 
 		$oldFieldList = $this->fieldList($tableName);
 		$fieldNameList = '"' . implode('","', array_keys($oldFieldList)) . '"';
@@ -439,12 +398,12 @@ class SQLite3Database extends SS_Database {
 
 			$queries = array(
 				"BEGIN TRANSACTION",
-				"CREATE TEMPORARY TABLE \"{$tableName}_change\"(" . implode(',', $newColsSpec) . ")",
-				"INSERT INTO \"{$tableName}_change\" SELECT {$fieldNameList} FROM \"$tableName\"",
+				"CREATE TEMPORARY TABLE \"{$tableName}_alterfield_{$fieldname}\"(" . implode(',', $newColsSpec) . ")",
+				"INSERT INTO \"{$tableName}_alterfield_{$fieldname}\" SELECT {$fieldNameList} FROM \"$tableName\"",
 				"DROP TABLE \"$tableName\"",
 				"CREATE TABLE \"$tableName\"(" . implode(',', $newColsSpec) . ")",
-				"INSERT INTO \"$tableName\" SELECT {$fieldNameList} FROM \"{$tableName}_change\"",
-				"DROP TABLE \"{$tableName}_change\"",
+				"INSERT INTO \"$tableName\" SELECT {$fieldNameList} FROM \"{$tableName}_alterfield_{$fieldname}\"",
+				"DROP TABLE \"{$tableName}_alterfield_{$fieldname}\"",
 				"COMMIT"
 			);
 
@@ -462,6 +421,7 @@ class SQLite3Database extends SS_Database {
 	 * @param string $newName The new name of the field
 	 */
 	public function renameField($tableName, $oldName, $newName) {
+		$this->used(__FUNCTION__);
 
 		$oldFieldList = $this->fieldList($tableName);
 
@@ -477,12 +437,12 @@ class SQLite3Database extends SS_Database {
 
 			$queries = array(
 				"BEGIN TRANSACTION",
-				"CREATE TEMPORARY TABLE \"{$tableName}_rename\"(" . implode(',', $newColsSpec) . ")",
-				"INSERT INTO \"{$tableName}_rename\" SELECT " . implode(',', $oldCols) . " FROM \"$tableName\"",
+				"CREATE TEMPORARY TABLE \"{$tableName}_renamefield_{$oldName}\" (" . implode(',', $newColsSpec) . ")",
+				"INSERT INTO \"{$tableName}_renamefield_{$oldName}\" SELECT " . implode(',', $oldCols) . " FROM \"$tableName\"",
 				"DROP TABLE \"$tableName\"",
 				"CREATE TABLE \"$tableName\"(" . implode(',', $newColsSpec) . ")",
-				"INSERT INTO \"$tableName\" SELECT " . implode(',', $newCols) . " FROM \"{$tableName}_rename\"",
-				"DROP TABLE \"{$tableName}_rename\"",
+				"INSERT INTO \"$tableName\" SELECT " . implode(',', $newCols) . " FROM \"{$tableName}_renamefield_{$oldName}\"",
+				"DROP TABLE \"{$tableName}_renamefield_{$oldName}\"",
 				"COMMIT"
 			);
 
@@ -492,6 +452,7 @@ class SQLite3Database extends SS_Database {
 	}
 
 	public function fieldList($table) {
+		$this->used(__FUNCTION__);
 		$sqlCreate = DB::query('SELECT sql FROM sqlite_master WHERE type = "table" AND name = "' . $table . '"')->record();
 
 		if($sqlCreate && $sqlCreate['sql']) {
@@ -516,20 +477,11 @@ class SQLite3Database extends SS_Database {
 	 * @param string $indexSpec The specification of the index, see Database::requireIndex() for more details.
 	 */
 	public function createIndex($tableName, $indexName, $indexSpec) {
+		$this->used(__FUNCTION__);
 
-		$name = "\"$tableName.$indexName\"";
-		$spec = $this->convertIndexSpec($tableName, $indexName, $indexSpec);
+		$spec = $this->convertIndexSpec($indexSpec, $indexName);
 
-		$currSpec = array(); $diff = false;
-		foreach(DB::query("PRAGMA index_info($name)") as $i) $currSpec[] = $i['name'];
-		foreach($spec as $s) if(array_search($s, $currSpec) === false) $diff = true;
-		if(count($spec) == count($currSpec) && !$diff) return;
-
-		$this->query("DROP INDEX IF EXISTS $name");
-
-		$this->query("CREATE INDEX $name ON \"$tableName\" (\"" . implode('","', $spec) . "\")");
-
-		$this->alterationMessage("Index $name: created as " . implode(', ', $spec),"created");
+		$this->query("CREATE INDEX $indexName ON \"$tableName\" ($spec)");
 
 	}
 
@@ -539,27 +491,28 @@ class SQLite3Database extends SS_Database {
 	 * Some indexes may be arrays, such as fulltext and unique indexes, and this allows database-specific
 	 * arrays to be created.
 	 */
-	public function convertIndexSpec($tableName, $indexName, $indexSpec){
+	public function convertIndexSpec($indexSpec, $indexName = null){
+		$this->used(__FUNCTION__);
 
 		if(is_array($indexSpec)) {
-			$indexSpecNew = $indexSpec['value'];
-		} else if(preg_match('/\((.+)\)/', $indexSpec, $matches)) {
-			$indexSpecNew = $matches[1];
-		} else {
-			$indexSpecNew = $indexName;
+			$indexSpec = $indexSpec['value'];
+		} else if(is_numeric($indexSpec)) {
+			$indexSpec = $indexName;
+		}
+		
+		if(preg_match('/\((.+)\)/', $indexSpec, $matches)) {
+			$indexSpec = $matches[1];
 		}
 
-		foreach(explode(',', $indexSpecNew) as $field) $indexOn[]=trim($field);
-
-		return $indexOn;
+		return preg_replace('/\s/', '', $indexSpec);
 	}
 
 	/**
 	 * prefix indexname with uppercase tablename if not yet done, in order to avoid ambiguity
 	 */
 	function getDbSqlDefinition($tableName, $indexName, $indexSpec) {
-		$newIndexName = preg_match('/^' . strtoupper($tableName) . '_/', $indexName) ? $indexName : strtoupper($tableName) . '_' . $indexName;
-		return $newIndexName;
+		$this->used(__FUNCTION__);
+		return "\"$tableName.$indexName\"";
 	}
 
 	/**
@@ -569,8 +522,7 @@ class SQLite3Database extends SS_Database {
 	 * @param string $indexSpec The specification of the index, see Database::requireIndex() for more details.
 	 */
 	public function alterIndex($tableName, $indexName, $indexSpec) {
-//		Debug::show($tableName . " alterIndex($tableName, $indexName, $indexSpec)");
-//		SS_Backtrace::backtrace();
+		$this->used(__FUNCTION__);
 		$this->createIndex($tableName, $indexName, $indexSpec);
 	}
 
@@ -580,6 +532,7 @@ class SQLite3Database extends SS_Database {
 	 * @return array
 	 */
 	public function indexList($table) {
+		$this->used(__FUNCTION__);
 
 		$indexList = array();
 		foreach(DB::query('PRAGMA index_list("' . $table . '")') as $index) {
@@ -597,6 +550,7 @@ class SQLite3Database extends SS_Database {
 	 * @return array
 	 */
 	public function tableList() {
+		$this->used(__FUNCTION__);
 		foreach($this->query('SELECT name FROM sqlite_master WHERE type = "table"') as $record) {
 			//$table = strtolower(reset($record));
 			$table = reset($record);
@@ -608,6 +562,7 @@ class SQLite3Database extends SS_Database {
 	}
 
 	function TableExists($tableName){
+		$this->used(__FUNCTION__);
 		$result=$this->query('SELECT name FROM sqlite_master WHERE type = "table" AND name="' . $tableName . '"')->first();
 
 		if($result)
@@ -622,6 +577,7 @@ class SQLite3Database extends SS_Database {
 	 * @return int
 	 */
 	public function affectedRows() {
+		$this->used(__FUNCTION__);
 		return $this->dbConn->changes();
 	}
 
@@ -632,7 +588,7 @@ class SQLite3Database extends SS_Database {
 	 * @return string
 	 */
 	public function boolean($values){
-
+		$this->used(__FUNCTION__);
 		return 'BOOL NOT NULL DEFAULT ' . (isset($values['default']) ? (int)$values['default'] : 0);
 
 	}
@@ -644,6 +600,7 @@ class SQLite3Database extends SS_Database {
 	 * @return string
 	 */
 	public function date($values){
+		$this->used(__FUNCTION__);
 
 		return "TEXT";
 
@@ -656,6 +613,7 @@ class SQLite3Database extends SS_Database {
 	 * @return string
 	 */
 	public function decimal($values, $asDbValue=false){
+		$this->used(__FUNCTION__);
 
 		return "NUMERIC NOT NULL DEFAULT 0";
 
@@ -672,16 +630,15 @@ class SQLite3Database extends SS_Database {
 	protected $enum_map = array();
 	
 	public function enum($values){
+		$this->used(__FUNCTION__);
 
 		$tablefield = $values['table'] . '.' . $values['name'];
 		if(empty($this->enum_map)) $this->query("CREATE TABLE IF NOT EXISTS SQLiteEnums (TableColumn TEXT PRIMARY KEY, EnumList TEXT)");
-		if(empty($this->enum_map[$tablefield]) || $this->enum_map[$tablefield] != implode(',', $values['enum'])) {
-			$this->query("REPLACE INTO SQLiteEnums (TableColumn, EnumList) VALUES (\"{$tablefield}\", \"" . implode(', ', $values['enum']) . "\")");
-			$this->enum_map[$tablefield] = implode(',', $values['enum']);
+		if(empty($this->enum_map[$tablefield]) || $this->enum_map[$tablefield] != implode(',', $values['enums'])) {
+			$this->query("REPLACE INTO SQLiteEnums (TableColumn, EnumList) VALUES (\"{$tablefield}\", \"" . implode(', ', $values['enums']) . "\")");
+			$this->enum_map[$tablefield] = implode(',', $values['enums']);
 		}
-
-		return 'TEXT DEFAULT \'' . ($values['default'] ? $values['default'] : $values['enum'][0]) . '\'';
-
+		return "TEXT DEFAULT '{$values['default']}'";
 	}
 
 	/**
@@ -691,6 +648,7 @@ class SQLite3Database extends SS_Database {
 	 * @return string
 	 */
 	public function float($values, $asDbValue=false){
+		$this->used(__FUNCTION__);
 
 		return "REAL";
 
@@ -703,6 +661,7 @@ class SQLite3Database extends SS_Database {
 	 * @return string
 	 */
 	public function Double($values, $asDbValue=false){
+		$this->used(__FUNCTION__);
 
 		return "REAL";
 
@@ -715,8 +674,9 @@ class SQLite3Database extends SS_Database {
 	 * @return string
 	 */
 	public function int($values, $asDbValue=false){
+		$this->used(__FUNCTION__);
 
-		return 'INTEGER(11) NOT NULL DEFAULT ' . (isset($values['default']) ? (int)$values['default'] : 0);
+		return "INTEGER({$values['precision']}) " . strtoupper($values['null']) . " DEFAULT " . (int)$values['default'];
 
 	}
 
@@ -728,6 +688,7 @@ class SQLite3Database extends SS_Database {
 	 * @return string
 	 */
 	public function ss_datetime($values, $asDbValue=false){
+		$this->used(__FUNCTION__);
 
 		return "DATETIME";
 
@@ -740,6 +701,7 @@ class SQLite3Database extends SS_Database {
 	 * @return string
 	 */
 	public function text($values, $asDbValue=false){
+		$this->used(__FUNCTION__);
 
 		return 'TEXT';
 
@@ -752,6 +714,7 @@ class SQLite3Database extends SS_Database {
 	 * @return string
 	 */
 	public function time($values){
+		$this->used(__FUNCTION__);
 
 		return "TEXT";
 
@@ -764,9 +727,8 @@ class SQLite3Database extends SS_Database {
 	 * @return string
 	 */
 	public function varchar($values, $asDbValue=false){
-
-		return 'VARCHAR(' . $values['size'] . ') COLLATE NOCASE';
-
+		$this->used(__FUNCTION__);
+		return "VARCHAR({$values['precision']}) COLLATE NOCASE";
 	}
 
 	/*
@@ -774,12 +736,14 @@ class SQLite3Database extends SS_Database {
 	 * For SQLite3 we use TEXT
 	 */
 	public function year($values, $asDbValue=false){
+		$this->used(__FUNCTION__);
 
 		return "TEXT";
 
 	}
 
 	function escape_character($escape=false){
+		$this->used(__FUNCTION__);
 
 		if($escape) return "\\\""; else return "\"";
 
@@ -793,6 +757,7 @@ class SQLite3Database extends SS_Database {
 	 * @return string
 	 */
 	function IdColumn($asDbValue=false){
+		$this->used(__FUNCTION__);
 		return 'INTEGER PRIMARY KEY AUTOINCREMENT';
 	}
 
@@ -800,6 +765,7 @@ class SQLite3Database extends SS_Database {
 	 * Returns true if this table exists
 	 */
 	function hasTable($tableName) {
+		$this->used(__FUNCTION__);
 		$SQL_table = Convert::raw2sql($table);
 		return (bool)($this->query("SELECT name FROM sqlite_master WHERE type = \"table\" AND name = \"$tableName\"")->value());
 	}
@@ -808,6 +774,7 @@ class SQLite3Database extends SS_Database {
 	 * Returns the SQL command to get all the tables in this database
 	 */
 	function allTablesSQL(){
+		$this->used(__FUNCTION__);
 		return 'SELECT name FROM sqlite_master WHERE type = "table"';
 	}
 
@@ -815,6 +782,7 @@ class SQLite3Database extends SS_Database {
 	 * Return enum values for the given field
 	 */
 	public function enumValuesForField($tableName, $fieldName) {
+		$this->used(__FUNCTION__);
 		$classnameinfo = DB::query("SELECT EnumList FROM SQLiteEnums WHERE TableColumn = \"{$tableName}.{$fieldName}\"")->first();
 		return explode(',', $classnameinfo['EnumList']);
 	}
@@ -823,6 +791,7 @@ class SQLite3Database extends SS_Database {
 	 * Get the actual enum fields from the constraint value:
 	 */
 	protected function EnumValuesFromConstraint($constraint){
+		$this->used(__FUNCTION__);
 		$constraint=substr($constraint, strpos($constraint, 'ANY (ARRAY[')+11);
 		$constraint=substr($constraint, 0, -11);
 		$constraints=Array();
@@ -839,6 +808,7 @@ class SQLite3Database extends SS_Database {
 	 * Returns the database-specific version of the now() function
 	 */
 	function now(){
+		$this->used(__FUNCTION__);
 		return "datetime('now', 'localtime')";
 	}
 
@@ -846,6 +816,7 @@ class SQLite3Database extends SS_Database {
 	 * Returns the database-specific version of the random() function
 	 */
 	function random(){
+		$this->used(__FUNCTION__);
 		return 'random()';
 	}
 
@@ -853,6 +824,7 @@ class SQLite3Database extends SS_Database {
 	 * This will return text which has been escaped in a database-friendly manner
 	 */
 	function addslashes($value){
+		$this->used(__FUNCTION__);
 		return $this->dbConn->escapeString($value);
 	}
 
@@ -860,9 +832,9 @@ class SQLite3Database extends SS_Database {
 	 * This changes the index name depending on database requirements.
 	 */
 	function modifyIndex($index, $spec){
-//		Debug::show("modifyIndex($index, $spec)");
-//		SS_Backtrace::backtrace();
-		return $index;
+		$this->used(__FUNCTION__);
+
+		return str_replace('"', '', $index);
 	}
 
 	/**
@@ -878,6 +850,7 @@ class SQLite3Database extends SS_Database {
 	 * @return object DataObjectSet of result pages
 	 */
 	public function searchEngine($classesToSearch, $keywords, $start, $pageLength, $sortBy = "Relevance DESC", $extraFilter = "", $booleanSearch = false, $alternativeFileFilter = "", $invertedMatch = false) {
+		$this->used(__FUNCTION__);
 		$fileFilter = '';           
 		$keywords = Convert::raw2sql(str_replace(array('*','+','-'),'',$keywords));
 		$htmlEntityKeywords = htmlentities(utf8_decode($keywords));
@@ -960,6 +933,7 @@ class SQLite3Database extends SS_Database {
 	 * Does this database support transactions?
 	 */
 	public function supportsTransactions(){
+		$this->used(__FUNCTION__);
 		return $this->supportsTransactions;
 	}
 
@@ -967,6 +941,7 @@ class SQLite3Database extends SS_Database {
 	 * This is a quick lookup to discover if the database supports particular extensions
 	 */
 	public function supportsExtensions($extensions=Array('partitions', 'tablespaces', 'clustering')){
+		$this->used(__FUNCTION__);
 		if(isset($extensions['partitions']))
 			return true;
 		elseif(isset($extensions['tablespaces']))
@@ -981,6 +956,7 @@ class SQLite3Database extends SS_Database {
 	 * Start a prepared transaction
 	 */
 	public function startTransaction($transaction_mode=false, $session_characteristics=false){
+		$this->used(__FUNCTION__);
 		DB::query('BEGIN');
 	}
 
@@ -988,6 +964,7 @@ class SQLite3Database extends SS_Database {
 	 * Create a savepoint that you can jump back to if you encounter problems
 	 */
 	public function transactionSavepoint($savepoint){
+		$this->used(__FUNCTION__);
 		DB::query("SAVEPOINT \"$savepoint\"");
 	}
 
@@ -997,6 +974,7 @@ class SQLite3Database extends SS_Database {
 	 * need to rollback that particular query, or return to a savepoint
 	 */
 	public function transactionRollback($savepoint=false){
+		$this->used(__FUNCTION__);
 
 		if($savepoint) {
 			DB::query("ROLLBACK TO $savepoint;");
@@ -1009,6 +987,7 @@ class SQLite3Database extends SS_Database {
 	 * Commit everything inside this transaction so far
 	 */
 	public function endTransaction(){
+		$this->used(__FUNCTION__);
 		DB::query('COMMIT;');
 	}
 
@@ -1016,6 +995,7 @@ class SQLite3Database extends SS_Database {
 	 * Convert a SQLQuery object into a SQL statement
 	 */
 	public function sqlQueryToString(SQLQuery $sqlQuery) {
+		$this->used(__FUNCTION__);
 		if (!$sqlQuery->from) return '';
 		$distinct = $sqlQuery->distinct ? "DISTINCT " : "";
 		if($sqlQuery->delete) {
@@ -1065,6 +1045,7 @@ class SQLite3Database extends SS_Database {
 	 * @return string fully specified ORDER BY expression
 	 */
 	protected function orderMoreSpecifically($select,$order) {
+		$this->used(__FUNCTION__);
 		
 		$altered = false;
 

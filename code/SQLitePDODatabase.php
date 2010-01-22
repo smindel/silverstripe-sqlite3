@@ -12,8 +12,6 @@ class SQLitePDODatabase extends SQLite3Database {
 	 */
 	function connectDatabase(){
 
-
-
 		$this->enum_map = array();
 
 		$parameters=$this->parameters;
@@ -24,7 +22,12 @@ class SQLitePDODatabase extends SQLite3Database {
 		$file = $parameters['path'] . '/' . $dbName;
 
 		// use the very lightspeed SQLite In-Memory feature for testing
-		if(SapphireTest::using_temp_db()) $file = ':memory:';
+		if(SapphireTest::using_temp_db()) {
+			$file = ':memory:';
+			self::$lives_in_memory = true;
+		} else {
+			self::$lives_in_memory = false;
+		}
 
 		$this->dbConn = new PDO("sqlite:$file");
 
