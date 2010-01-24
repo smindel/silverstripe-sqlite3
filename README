@@ -41,16 +41,15 @@ E.g.: http://www.my-project.com/?avoidConflict=1
 
 Tested stacks
 -------------
-OSX leopard, XAMP with PHP 5.3.0, SQLite3.6.3
+OSX leopard, XAMPP with PHP 5.3.0, SQLite3.6.3
+Ubuntu, PHP 5.2.4, SQLite3.4.2
+WinXP, XAMPP with PHP 5.3.0, SQLite3.6.16
 
 
 Open Issues
 -----------
 - SQLite3 may not work with certain modules as they are using custom SQL statements passed to the DB class directly ;(
-- the SQLite3 locking behavior has to be explored, this is constantly causing trouble
 - there is no real fulltext search yet and the build-in search engine is not ordering by relevance, check out fts3
-- needs testing on different stacks
-
 
 Things to note when using SQLite3
 ---------------------------------

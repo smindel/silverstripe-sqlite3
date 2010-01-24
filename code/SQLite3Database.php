@@ -1074,10 +1074,6 @@ class SQLite3Query extends SS_Query {
 		$this->handle = $handle;
 	}
 
-	public function __destruct() {
-		$this->handle->finalize();
-	}
-
 	public function __destroy() {
 		$this->handle->finalize();
 	}
