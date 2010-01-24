@@ -22,11 +22,11 @@ class SQLitePDODatabase extends SQLite3Database {
 		$file = $parameters['path'] . '/' . $dbName;
 
 		// use the very lightspeed SQLite In-Memory feature for testing
-		if(SapphireTest::using_temp_db()) {
+		if(SapphireTest::using_temp_db() && $parameters['memory']) {
 			$file = ':memory:';
-			self::$lives_in_memory = true;
+			$this->lives_in_memory = true;
 		} else {
-			self::$lives_in_memory = false;
+			$this->lives_in_memory = false;
 		}
 
 		$this->dbConn = new PDO("sqlite:$file");
@@ -35,10 +35,17 @@ class SQLitePDODatabase extends SQLite3Database {
 		$this->active=true;
 		$this->database = $dbName;
 
-		if(!$this->dbConn || !empty($error)) {
-			$this->databaseError("Couldn't connect to SQLite database");
+		if(!$this->dbConn) {
+			$this->databaseError("Couldn't connect to SQLite3 database");
 			return false;
 		}
+		
+		foreach(self::$default_pragma as $pragma => $value) $this->pragma($pragma, $value);
+		
+		if(empty(self::$default_pragma['locking_mode'])) {
+			self::$default_pragma['locking_mode'] = $this->pragma('locking_mode');
+		}
+
 		return true;
 	}
 
@@ -62,7 +69,7 @@ class SQLitePDODatabase extends SQLite3Database {
 				WHERE "ParentID" = ' . $matches[0];
 		}
 
-		$handle = $this->dbConn->query($sql);
+		@$handle = $this->dbConn->query($sql);
 
 		if(isset($_REQUEST['showqueries'])) {
 			$endtime = round(microtime(true) - $starttime,4);

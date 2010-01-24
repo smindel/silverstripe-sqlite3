@@ -34,6 +34,11 @@ you can set the path for storing your SQLite db file or make use of the :memory:
 make sure the webserver has sufficient privileges to write to that folder and that it is protected from external access.
 
 
+URL parameter
+-------------
+If you're trying change a field constrain to NOT NULL on a field that contains NULLs it aborts the action because it might corrupt existing records. In order to perform the action anyway add the URL parameter 'avoidConflict' when running dev/build which temporarily adds a conflict clause to the field spec.
+E.g.: http://www.my-project.com/?avoidConflict=1
+
 Tested stacks
 -------------
 OSX leopard, XAMP with PHP 5.3.0, SQLite3.6.3
@@ -55,3 +60,56 @@ Things to note when using SQLite3
 - does not fully implement SQL-92 standard, e.g. the ALTER TABLE syntax is limited to adding and renaming fields
 - references for sqlite are e.g. ADOBE (Photoshop Lightroom), Apple (Safari, Mail, iPod, iPhone) Mozilla (Firefox, Thunderbird), Google (Chrome)
 - if you are looking for a SQLite client for debugging, the SQLite plugin for firefox may be worth a try
+
+SiteTree::doPublish() issue
+---------------------------
+SiteTree::doPublish() currently uses a two different non ANSI SQL statements to update the order of SiteTree_Live to satisfy the need of MySQL and MSSQL/Postgres but doesn#t work for SQLite.
+A fix would be to use an ANSI compliant form:
+
+proprietary multiple-table syntax
+------------
++ MySQL
+- MSSQL
+- Postgres
+- SQLite
+------------
+UPDATE
+	SiteTree_Live, SiteTree
+SET
+	SiteTree_Live.Sort = SiteTree.Sort
+WHERE
+	SiteTree_Live.ID = SiteTree.ID AND
+	SiteTree_Live.ParentID = 1
+
+proprietary UPDATE FROM syntax
+------------
+- MySQL
++ MSSQL
++ Postgres
+- SQLite
+------------
+UPDATE
+	SiteTree_Live
+SET
+	Sort = SiteTree.Sort
+FROM 
+	SiteTree
+WHERE
+	SiteTree_Live.ID = SiteTree.ID AND
+	SiteTree_Live.ParentID = 1
+
+ANSI syntax
+------------
++ MySQL
+? MSSQL
+? Postgres
++ SQLite
+------------
+UPDATE 
+	SiteTree_Live
+SET
+	Sort = (
+		SELECT SiteTree.Sort FROM SiteTree WHERE SiteTree_Live.ID = SiteTree.ID
+	)
+WHERE
+	ParentID = 1
