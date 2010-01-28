@@ -114,6 +114,10 @@ class SQLitePDOQuery extends SQLite3Query {
 		$this->handle = $handle;
 	}
 
+	public function __destruct() {
+		$this->handle->closeCursor();
+	}
+
 	public function __destroy() {
 		$this->handle->closeCursor();
 	}

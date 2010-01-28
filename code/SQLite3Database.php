@@ -178,15 +178,6 @@ class SQLite3Database extends SS_Database {
 			$starttime = microtime(true);
 		}
 
-		// @todo This is a very ugly hack to rewrite the update statement of SiteTree::doPublish()
-		// @see SiteTree::doPublish() There is a hack for MySQL already, maybe it's worth moving this to SiteTree or that other hack to Database...
-		if(preg_replace('/[\W\d]*/i','',$sql) == 'UPDATESiteTree_LiveSETSortSiteTreeSortFROMSiteTreeWHERESiteTree_LiveIDSiteTreeIDANDSiteTree_LiveParentID') {
-			preg_match('/\d+/i',$sql,$matches);
-			$sql = 'UPDATE "SiteTree_Live"
-				SET "Sort" = (SELECT "SiteTree"."Sort" FROM "SiteTree" WHERE "SiteTree_Live"."ID" = "SiteTree"."ID")
-				WHERE "ParentID" = ' . $matches[0];
-		}
-
 		@$handle = $this->dbConn->query($sql);
 
 		if(isset($_REQUEST['showqueries'])) {
@@ -285,6 +276,8 @@ class SQLite3Database extends SS_Database {
 
 	function beginSchemaUpdate() {
 		$this->pragma('locking_mode', 'EXCLUSIVE');
+		$this->checkAndRepairTable();
+		// if($this->TableExists('SQLiteEnums')) $this->query("DELETE FROM SQLiteEnums");
 		$this->checkAndRepairTable();
 		parent::beginSchemaUpdate();
 	}
@@ -486,7 +479,7 @@ class SQLite3Database extends SS_Database {
 		$spec = $this->convertIndexSpec($indexSpec, $indexName);
 		if(!preg_match('/".+"/', $indexName)) $indexName = "\"$indexName\"";
 		
-		$this->query("CREATE INDEX $indexName ON \"$tableName\" ($spec)");
+		$this->query("CREATE INDEX IF NOT EXISTS $indexName ON \"$tableName\" ($spec)");
 
 	}
 
@@ -632,7 +625,7 @@ class SQLite3Database extends SS_Database {
 		$tablefield = $values['table'] . '.' . $values['name'];
 		if(empty($this->enum_map)) $this->query("CREATE TABLE IF NOT EXISTS SQLiteEnums (TableColumn TEXT PRIMARY KEY, EnumList TEXT)");
 		if(empty($this->enum_map[$tablefield]) || $this->enum_map[$tablefield] != implode(',', $values['enums'])) {
-			$this->query("REPLACE INTO SQLiteEnums (TableColumn, EnumList) VALUES (\"{$tablefield}\", \"" . implode(', ', $values['enums']) . "\")");
+			$this->query("REPLACE INTO SQLiteEnums (TableColumn, EnumList) VALUES (\"{$tablefield}\", \"" . implode(',', $values['enums']) . "\")");
 			$this->enum_map[$tablefield] = implode(',', $values['enums']);
 		}
 		return "TEXT DEFAULT '{$values['default']}'";
@@ -768,7 +761,9 @@ class SQLite3Database extends SS_Database {
 	 */
 	public function enumValuesForField($tableName, $fieldName) {
 		$classnameinfo = DB::query("SELECT EnumList FROM SQLiteEnums WHERE TableColumn = \"{$tableName}.{$fieldName}\"")->first();
-		return explode(',', $classnameinfo['EnumList']);
+		$return = explode(',', $classnameinfo['EnumList']);
+		//for($i=0; $i<count($return);$i++) $return[$i] = trim($return[$i]);
+		return $return;
 	}
 
 	/**
@@ -1044,6 +1039,7 @@ class SQLite3Database extends SS_Database {
 
 		return implode(',', $terms);
 	}
+	
 }
 
 /**
