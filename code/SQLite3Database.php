@@ -1040,6 +1040,111 @@ class SQLite3Database extends SS_Database {
 		return implode(',', $terms);
 	}
 	
+	/**
+	 * dbDatetimeXXX: Helper functions to prepare DBMS specific SQL fragments for basic datetime operations
+	 */
+	
+	/**
+	 * Function to return an SQL datetime expression that can be used with SQLite3
+	 * used for querying a datetime in a certain format
+	 * @param string $date to be formated, can be either 'now', literal datetime like '1973-10-14 10:30:00' or field name, e.g. '"SiteTree"."Created"'
+	 * @param string $format to be used, supported specifiers:
+	 * %Y = Year (four digits)
+	 * %m = Month (01..12)
+	 * %d = Day (01..31)
+	 * %H = Hour (00..23)
+	 * %i = Minutes (00..59)
+	 * %s = Seconds (00..59)
+	 * %U = unix timestamp, can only be used on it's own
+	 * @return string SQL datetime expression to query for a formatted datetime
+	 */
+	function formattedDatetimeClause($date, $format) {
+
+		preg_match_all('/%(.)/', $format, $matches);
+		foreach($matches[1] as $match) if(array_search($match, array('Y','m','d','H','i','s','U')) === false) user_error('formattedDatetimeClause(): unsupported format character %' . $match, E_USER_WARNING);
+		
+		$translate = array(
+			'/%i/' => '%M',
+			'/%s/' => '%S',
+			'/%U/' => '%s',
+		);
+		$format = preg_replace(array_keys($translate), array_values($translate), $format);
+
+		$modifiers = array();
+		if($format == '%s' && $date != 'now') $modifiers[] = 'utc';
+		if($format != '%s' && $date == 'now') $modifiers[] = 'localtime';
+
+		if(preg_match('/^now$/i', $date)) {
+			$date = "'now'";
+		} else if(preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/i', $date)) {
+			$date = "'$date'";
+		}
+
+		$modifier = empty($modifiers) ? '' : ", '" . implode("', '", $modifiers) . "'";
+		return "strftime('$format', $date$modifier)";
+	}
+	
+	/**
+	 * Function to return an SQL datetime expression that can be used with SQLite3
+	 * used for querying a datetime addition
+	 * @param string $date, can be either 'now', literal datetime like '1973-10-14 10:30:00' or field name, e.g. '"SiteTree"."Created"'
+	 * @param string $interval to be added, use the format [sign][integer] [qualifier], e.g. -1 Day, +15 minutes, +1 YEAR
+	 * supported qualifiers:
+	 * - years
+	 * - months
+	 * - days
+	 * - hours
+	 * - minutes
+	 * - seconds
+	 * This includes the singular forms as well
+	 * @return string SQL datetime expression to query for a datetime (YYYY-MM-DD hh:mm:ss) which is the result of the addition
+	 */
+	function datetimeIntervalClause($date, $interval) {
+		$modifiers = array();
+		if($date == 'now') $modifiers[] = 'localtime';
+
+		if(preg_match('/^now$/i', $date)) {
+			$date = "'now'";
+		} else if(preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/i', $date)) {
+			$date = "'$date'";
+		}
+
+		$modifier = empty($modifiers) ? '' : ", '" . implode("', '", $modifiers) . "'";
+		return "datetime($date$modifier, '$interval')";
+	}
+
+	/**
+	 * Function to return an SQL datetime expression that can be used with SQLite3
+	 * used for querying a datetime substraction
+	 * @param string $date1, can be either 'now', literal datetime like '1973-10-14 10:30:00' or field name, e.g. '"SiteTree"."Created"'
+	 * @param string $date2 to be substracted of $date1, can be either 'now', literal datetime like '1973-10-14 10:30:00' or field name, e.g. '"SiteTree"."Created"'
+	 * @return string SQL datetime expression to query for the interval between $date1 and $date2 in seconds which is the result of the substraction
+	 */
+	function datetimeDifferenceClause($date1, $date2) {
+
+		$modifiers1 = array();
+		$modifiers2 = array();
+
+		if($date1 == 'now') $modifiers1[] = 'localtime';
+		if($date2 == 'now') $modifiers2[] = 'localtime';
+
+		if(preg_match('/^now$/i', $date1)) {
+			$date1 = "'now'";
+		} else if(preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/i', $date1)) {
+			$date1 = "'$date1'";
+		}
+
+		if(preg_match('/^now$/i', $date2)) {
+			$date2 = "'now'";
+		} else if(preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/i', $date2)) {
+			$date2 = "'$date2'";
+		}
+
+		$modifier1 = empty($modifiers1) ? '' : ", '" . implode("', '", $modifiers1) . "'";
+		$modifier2 = empty($modifiers2) ? '' : ", '" . implode("', '", $modifiers2) . "'";
+
+		return "strftime('%s', $date1$modifier1) - strftime('%s', $date2$modifier2)";
+	}
 }
 
 /**
