@@ -386,6 +386,7 @@ class SQLite3Database extends SS_Database {
 			$oldCols = array();
 
 			foreach($oldFieldList as $name => $spec) {
+				aDebug($name == $fieldName ? $fieldSpec : $spec);
 				$newColsSpec[] = "\"$name\" " . ($name == $fieldName ? $fieldSpec : $spec);
 			}
 
@@ -455,7 +456,7 @@ class SQLite3Database extends SS_Database {
 
 		if($sqlCreate && $sqlCreate['sql']) {
 			preg_match('/^[\s]*CREATE[\s]+TABLE[\s]+"[a-zA-Z0-9_]+"[\s]*\((.+)\)[\s]*$/ims', $sqlCreate['sql'], $matches);
-			$fields = isset($matches[1]) ? preg_split('/,/i', $matches[1]) : array();
+			$fields = isset($matches[1]) ? preg_split('/,(?=(?:[^\'"]*$)|(?:[^\'"]*[\'"][^\'"]*[\'"][^\'"]*)*$)/x', $matches[1]) : array();
 			foreach($fields as $field) {
 				$details = preg_split('/\s/', trim($field));
 				$name = array_shift($details);
@@ -629,6 +630,28 @@ class SQLite3Database extends SS_Database {
 			$this->enum_map[$tablefield] = implode(',', $values['enums']);
 		}
 		return "TEXT DEFAULT '{$values['default']}'";
+	}
+	
+	/**
+	 * Return a set type-formatted string
+	 * This type doesn't exist in SQLite as well
+	 * 
+	 * @params array $values Contains a tokenised list of info about this data type
+	 * @return string
+	 */
+	public function set($values) {
+		$tablefield = $values['table'] . '.' . $values['name'];
+		if(empty($this->enum_map)) $this->query("CREATE TABLE IF NOT EXISTS SQLiteEnums (TableColumn TEXT PRIMARY KEY, EnumList TEXT)");
+		if(empty($this->enum_map[$tablefield]) || $this->enum_map[$tablefield] != implode(',', $values['enums'])) {
+			$this->query("REPLACE INTO SQLiteEnums (TableColumn, EnumList) VALUES (\"{$tablefield}\", \"" . implode(',', $values['enums']) . "\")");
+			$this->enum_map[$tablefield] = implode(',', $values['enums']);
+		}
+		$default = '';
+		if(!empty($values['default'])) {
+			$default = str_replace(array('"',"'","\\","\0"), "", $values['default']);
+			$default = " DEFAULT '$default'";
+		}
+		return 'TEXT' . $default;
 	}
 
 	/**
@@ -962,7 +985,6 @@ class SQLite3Database extends SS_Database {
 	 * Convert a SQLQuery object into a SQL statement
 	 */
 	public function sqlQueryToString(SQLQuery $sqlQuery) {
-
 		if (!$sqlQuery->from) return '';
 		$distinct = $sqlQuery->distinct ? "DISTINCT " : "";
 		if($sqlQuery->delete) {
@@ -1041,7 +1063,7 @@ class SQLite3Database extends SS_Database {
 	}
 	
 	/**
-	 * dbDatetimeXXX: Helper functions to prepare DBMS specific SQL fragments for basic datetime operations
+	 * Helper functions to prepare DBMS specific SQL fragments for basic datetime operations
 	 */
 	
 	/**
