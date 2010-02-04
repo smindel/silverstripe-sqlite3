@@ -386,7 +386,6 @@ class SQLite3Database extends SS_Database {
 			$oldCols = array();
 
 			foreach($oldFieldList as $name => $spec) {
-				aDebug($name == $fieldName ? $fieldSpec : $spec);
 				$newColsSpec[] = "\"$name\" " . ($name == $fieldName ? $fieldSpec : $spec);
 			}
 
@@ -1050,7 +1049,7 @@ class SQLite3Database extends SS_Database {
 
 				// find a match in the SELECT array and replace
 				foreach($select as $s) {
-					if(preg_match('/"[a-z0-9_]+"\.' . $term . '/i', trim($s))) {
+					if(preg_match('/"[a-z0-9_]+"\.[\'"]?' . $term . '[\'"]?/i', trim($s))) {
 						$terms[$i] = $s . ' ' . $direction;
 						$altered = true;
 						break;
