@@ -606,7 +606,8 @@ class SQLite3Database extends SS_Database {
 	 */
 	public function decimal($values, $asDbValue=false){
 
-		return "NUMERIC NOT NULL DEFAULT 0";
+		$default = isset($values['default']) && is_numeric($values['default']) ? $values['default'] : 0;
+		return "NUMERIC NOT NULL DEFAULT " . $default;
 
 	}
 
