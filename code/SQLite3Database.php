@@ -424,13 +424,10 @@ class SQLite3Database extends SS_Database {
 	 * @param string $newName The new name of the field
 	 */
 	public function renameField($tableName, $oldName, $newName) {
-
 		$oldFieldList = $this->fieldList($tableName);
+		$oldCols = array();
 
 		if(array_key_exists($oldName, $oldFieldList)) {
-
-			$oldCols = array();
-
 			foreach($oldFieldList as $name => $spec) {
 				$oldCols[] = "\"$name\"" . (($name == $oldName) ? " AS $newName" : '');
 				$newCols[] = "\"". (($name == $oldName) ? $newName : $name). "\"";
@@ -459,8 +456,8 @@ class SQLite3Database extends SS_Database {
 	}
 
 	public function fieldList($table) {
-
 		$sqlCreate = DB::query('SELECT sql FROM sqlite_master WHERE type = "table" AND name = "' . $table . '"')->record();
+		$fieldList = array();
 
 		if($sqlCreate && $sqlCreate['sql']) {
 			preg_match('/^[\s]*CREATE[\s]+TABLE[\s]+"[a-zA-Z0-9_]+"[\s]*\((.+)\)[\s]*$/ims', $sqlCreate['sql'], $matches);
@@ -471,10 +468,9 @@ class SQLite3Database extends SS_Database {
 				$name = str_replace('"', '', trim($name));
 				$fieldList[$name] = implode(' ', $details);
 			}
-			return $fieldList;
-		} else {
-			return array();
 		}
+
+		return $fieldList;
 	}
 
 	/**
@@ -484,7 +480,6 @@ class SQLite3Database extends SS_Database {
 	 * @param string $indexSpec The specification of the index, see Database::requireIndex() for more details.
 	 */
 	public function createIndex($tableName, $indexName, $indexSpec) {
-
 		$spec = $this->convertIndexSpec($indexSpec, $indexName);
 		if(!preg_match('/".+"/', $indexName)) $indexName = "\"$indexName\"";
 		
@@ -498,8 +493,7 @@ class SQLite3Database extends SS_Database {
 	 * Some indexes may be arrays, such as fulltext and unique indexes, and this allows database-specific
 	 * arrays to be created.
 	 */
-	public function convertIndexSpec($indexSpec, $indexName = null){
-
+	public function convertIndexSpec($indexSpec, $indexName = null) {
 		if(is_array($indexSpec)) {
 			$indexSpec = $indexSpec['value'];
 		} else if(is_numeric($indexSpec)) {
@@ -536,7 +530,6 @@ class SQLite3Database extends SS_Database {
 	 * @return array
 	 */
 	public function indexList($table) {
-
 		$indexList = array();
 		foreach(DB::query('PRAGMA index_list("' . $table . '")') as $index) {
 			$list = array();
@@ -553,7 +546,7 @@ class SQLite3Database extends SS_Database {
 	 * @return array
 	 */
 	public function tableList() {
-
+		$tables = array();
 		foreach($this->query('SELECT name FROM sqlite_master WHERE type = "table"') as $record) {
 			//$table = strtolower(reset($record));
 			$table = reset($record);
