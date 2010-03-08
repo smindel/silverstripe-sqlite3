@@ -822,6 +822,21 @@ class SQLite3Database extends SS_Database {
 	}
 
 	/*
+	 * This is a lookup table for data types.
+	 * For instance, Postgres uses 'INT', while MySQL uses 'UNSIGNED'
+	 * So this is a DB-specific list of equivalents.
+	 */
+	function dbDataType($type){
+		$values=Array(
+			'unsigned integer'=>'INT'
+		);
+		
+		if(isset($values[$type]))
+			return $values[$type];
+		else return '';
+	}
+	
+	/*
 	 * This will return text which has been escaped in a database-friendly manner
 	 */
 	function addslashes($value){
