@@ -363,6 +363,7 @@ class SQLite3Database extends SS_Database {
 		$ok = true;
 
 		if(!SapphireTest::using_temp_db() && !self::$checked_and_repaired) {
+			$this->alterationMessage("SQLite Version " . $this->getVersion(),"repaired");
 			$this->alterationMessage("Checking database integrity","repaired");
 			if($msgs = $this->query('PRAGMA integrity_check')) foreach($msgs as $msg) if($msg['integrity_check'] != 'ok') { Debug::show($msg['integrity_check']); $ok = false; }
 			$this->query('VACUUM');
