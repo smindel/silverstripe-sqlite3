@@ -1,10 +1,13 @@
 <?php
 
+$classes = array('SQLiteDatabase', 'SQLite3Database', 'SQLitePDODatabase');
+
 global $databaseConfig;
-if(defined('SS_DATABASE_CLASS')) $databaseConfig['type'] = SS_DATABASE_CLASS;
+if(defined('SS_DATABASE_CLASS') && in_array(SS_DATABASE_CLASS, $classes)) {
+	$databaseConfig['type'] = SS_DATABASE_CLASS;
+}
 
-if(array_search($databaseConfig['type'], array('SQLiteDatabase', 'SQLite3Database', 'SQLitePDODatabase')) !== false) {
-
+if(in_array($databaseConfig['type'], $classes)) {
 	if(empty($databaseConfig['path'])) $databaseConfig['path'] = defined('SS_SQLITE_DATABASE_PATH') && SS_SQLITE_DATABASE_PATH ? SS_SQLITE_DATABASE_PATH : ASSETS_PATH . '/.sqlitedb/';   // where to put the database file
 	$databaseConfig['database'] = (defined('SS_DATABASE_PREFIX') ? SS_DATABASE_PREFIX : '') . $databaseConfig['database'] . (defined('SS_DATABASE_SUFFIX') ? SS_DATABASE_SUFFIX : '');
 	if(!isset($databaseConfig['memory'])) $databaseConfig['memory'] = true; // run tests in memory
@@ -20,10 +23,9 @@ if(array_search($databaseConfig['type'], array('SQLiteDatabase', 'SQLite3Databas
 	);
 
 	// The SQLite3 class is available in PHP 5.3 and newer
-	if($databaseConfig['type'] == 'SQLitePDODatabase' || !class_exists('SQLite3')) {
-		$databaseConfig['type'] = 'SQLitePDODatabase';
-	} else {
+	if(class_exists('SQLite3') && $databaseConfig['type'] == 'SQLite3Database') {
 		$databaseConfig['type'] = 'SQLite3Database';
+	} else {
+		$databaseConfig['type'] = 'SQLitePDODatabase';
 	}
 }
-
