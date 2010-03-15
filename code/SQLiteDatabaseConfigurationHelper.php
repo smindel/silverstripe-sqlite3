@@ -59,32 +59,45 @@ class SQLiteDatabaseConfigurationHelper implements DatabaseConfigurationHelper {
 	public function requireDatabaseConnection($databaseConfig) {
 		$success = false;
 		$error = '';
-
+		
+		// arg validation
+		if(!isset($databaseConfig['path']) || !$databaseConfig['path']) return array(
+			'success' => false,
+			'error' => sprintf('Invalid path: "%s"', $databaseConfig['path'])
+		);
 		$path = $databaseConfig['path'];
-		if($path && $databaseConfig['database']) {
-			// create and secure db directory
-			if(!file_exists($path)) {
-				self::create_db_dir($path);
-			}
-			self::secure_db_dir($path);
+		
+		if(!isset($databaseConfig['database']) || !$databaseConfig['database']) return array(
+			'success' => false,
+			'error' => sprintf('Invalid database name: "%s"', $databaseConfig['database'])
+		);
+		
+		// create and secure db directory
+		$dirCreated = self::create_db_dir($path);
+		if(!$dirCreated) return array(
+			'success' => false,
+			'error' => sprintf('Cannot create path: "%s"', $path)
+		);
+		$dirSecured = self::secure_db_dir($path);
+		if(!$dirSecured) return array(
+			'success' => false,
+			'error' => sprintf('Cannot secure path through .htaccess: "%s"', $path)
+		);
 
-			$file = $path . '/' . $databaseConfig['database'];
-			$file = preg_replace('/\/$/', '', $file);
+		$file = $path . '/' . $databaseConfig['database'];
+		$file = preg_replace('/\/$/', '', $file);
 
-			if($databaseConfig['type'] == 'SQLitePDODatabase' || version_compare(phpversion(), '5.3.0', '<')) {
-				$conn = @(new PDO("sqlite:$file"));
-			} else {
-				$conn = @(new SQLite3($file, SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE));
-			}
+		if($databaseConfig['type'] == 'SQLitePDODatabase' || version_compare(phpversion(), '5.3.0', '<')) {
+			$conn = @(new PDO("sqlite:$file"));
+		} else {
+			$conn = @(new SQLite3($file, SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE));
+		}
 
-			if($conn) {
-				$success = true;
-			} else {
-				$success = false;
-				$error = '';
-			}
+		if($conn) {
+			$success = true;
 		} else {
 			$success = false;
+			$error = '';
 		}
 		
 		
@@ -150,6 +163,6 @@ class SQLiteDatabaseConfigurationHelper implements DatabaseConfigurationHelper {
 	 * @return boolean
 	 */
 	public static function secure_db_dir($path) {
-		file_put_contents($path . '/.htaccess', 'deny from all');
+		return (is_writeable($path)) ? file_put_contents($path . '/.htaccess', 'deny from all') : false;
 	}
 }
