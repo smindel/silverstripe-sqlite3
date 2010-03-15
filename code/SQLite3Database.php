@@ -88,7 +88,10 @@ class SQLite3Database extends SS_Database {
 			$this->lives_in_memory = false;
 		}
 		
-		self::safe_dir($parameters['path']);
+		if(!file_exists($parameters['path'])) {
+			SQLiteDatabaseConfigurationHelper::create_db_dir($parameters['path']);
+			SQLiteDatabaseConfigurationHelper::secure_db_dir($parameters['path']);
+		}
 
 		$this->dbConn = new SQLite3($file, SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE, $parameters['key']);
 
@@ -115,13 +118,6 @@ class SQLite3Database extends SS_Database {
 	 */
 	public function getConnect($parameters) {
 		return null;
-	}
-
-	public static function safe_dir($path) {
-		if($path == ASSETS_PATH . '/.sqlitedb/' && !file_exists($path)) {
-			mkdir($path);
-			file_put_contents($path . '.htaccess', 'deny from all');
-		}
 	}
 
 	/**

@@ -28,11 +28,18 @@ class SQLiteDatabaseConfigurationHelper implements DatabaseConfigurationHelper {
 	 * @return array Result - e.g. array('success' => true, 'error' => 'details of error')
 	 */
 	public function requireDatabaseServer($databaseConfig) {
-		if(is_writable($databaseConfig['path'])) {
+		$path = $databaseConfig['path'];
+		
+		if(!$path) {
+			$success = false;
+			$error = 'No database path provided';
+		} 
+		// check if parent folder is writeable
+		elseif(is_writable(dirname($path))) {
 			$success = true;
 		} else {
 			$success = false;
-			$error = 'Webserver can\'t write database file to ' . $databaseConfig['path'];
+			$error = 'Webserver can\'t write database file to path "' . $path . '"';
 		}
 
 		return array(
@@ -43,29 +50,43 @@ class SQLiteDatabaseConfigurationHelper implements DatabaseConfigurationHelper {
 
 	/**
 	 * Ensure a database connection is possible using credentials provided.
+	 * 
+	 * @todo Validate path
+	 * 
 	 * @param array $databaseConfig Associative array of db configuration, e.g. "type", "path" etc
 	 * @return array Result - e.g. array('success' => true, 'error' => 'details of error')
 	 */
 	public function requireDatabaseConnection($databaseConfig) {
-
 		$success = false;
 		$error = '';
 
-		SQLite3Database::safe_dir($databaseConfig['path']);
-		$file = $databaseConfig['path'] . '/' . $databaseConfig['database'];
-		
-		if($databaseConfig['type'] == 'SQLitePDODatabase' || version_compare(phpversion(), '5.3.0', '<')) {
-			$conn = @(new PDO("sqlite:$file"));
-		} else {
-			$conn = @(new SQLite3($file, SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE, $parameters['key']));
-		}
-		
-		if($conn) {
-			$success = true;
+		$path = $databaseConfig['path'];
+		if($path && $databaseConfig['database']) {
+			// create and secure db directory
+			if(!file_exists($path)) {
+				self::create_db_dir($path);
+			}
+			self::secure_db_dir($path);
+
+			$file = $path . '/' . $databaseConfig['database'];
+			$file = preg_replace('/\/$/', '', $file);
+
+			if($databaseConfig['type'] == 'SQLitePDODatabase' || version_compare(phpversion(), '5.3.0', '<')) {
+				$conn = @(new PDO("sqlite:$file"));
+			} else {
+				$conn = @(new SQLite3($file, SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE));
+			}
+
+			if($conn) {
+				$success = true;
+			} else {
+				$success = false;
+				$error = '';
+			}
 		} else {
 			$success = false;
-			$error = '';
 		}
+		
 		
 		return array(
 			'success' => $success,
@@ -105,5 +126,30 @@ class SQLiteDatabaseConfigurationHelper implements DatabaseConfigurationHelper {
 			'alreadyExists' => $alreadyExists,
 		);
 	}
-
+	
+	/**
+	 * Creates the provided directory and prepares it for
+	 * storing SQLlite. Use {@link secure_db_dir()} to
+	 * secure it against unauthorized access.
+	 * 
+	 * @param String $path Absolute path, usually with a hidden folder.
+	 * @return boolean
+	 */
+	public static function create_db_dir($path) {
+		return (!file_exists($path)) ? mkdir($path) : true;
+	}
+	
+	/**
+	 * Secure the provided directory via web-access
+	 * by placing a .htaccess file in it. 
+	 * This is just required if the database directory
+	 * is placed within a publically accessible webroot (the
+	 * default path is in a hidden folder within assets/).
+	 * 
+	 * @param String $path Absolute path, containing a SQLite datatbase
+	 * @return boolean
+	 */
+	public static function secure_db_dir($path) {
+		file_put_contents($path . '/.htaccess', 'deny from all');
+	}
 }
