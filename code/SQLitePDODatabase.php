@@ -29,7 +29,10 @@ class SQLitePDODatabase extends SQLite3Database {
 			$this->lives_in_memory = false;
 		}
 
-		self::safe_dir($parameters['path']);
+		if(!file_exists($parameters['path'])) {
+			SQLiteDatabaseConfigurationHelper::create_db_dir($parameters['path']);
+			SQLiteDatabaseConfigurationHelper::secure_db_dir($parameters['path']);
+		}
 
 		$this->dbConn = new PDO("sqlite:$file");
 
