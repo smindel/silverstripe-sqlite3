@@ -99,7 +99,7 @@ class SQLitePDODatabase extends SQLite3Database {
 	 * This will return text which has been escaped in a database-friendly manner
 	 */
 	function addslashes($value){
-		return sqlite_escape_string($value);
+		return str_replace("'", "''", $value);
 	}
 }
 
