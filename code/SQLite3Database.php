@@ -780,12 +780,15 @@ class SQLite3Database extends SS_Database {
 
 	/**
 	 * Return enum values for the given field
+	 * @return array
 	 */
 	public function enumValuesForField($tableName, $fieldName) {
 		$classnameinfo = DB::query("SELECT EnumList FROM SQLiteEnums WHERE TableColumn = \"{$tableName}.{$fieldName}\"")->first();
-		$return = explode(',', $classnameinfo['EnumList']);
-		//for($i=0; $i<count($return);$i++) $return[$i] = trim($return[$i]);
-		return $return;
+		$output = array();
+		if($classnameinfo) {
+			$output = explode(',', $classnameinfo['EnumList']);
+		}
+		return $output;
 	}
 
 	/**
