@@ -169,7 +169,7 @@ class SQLite3Database extends SS_Database {
 	 * @return string
 	 */
 	public function getDatabaseServer() {
-		return "sqlite";
+		return "SQLite3";
 	}
 
 	public function query($sql, $errorLevel = E_USER_ERROR) {
@@ -293,7 +293,7 @@ class SQLite3Database extends SS_Database {
 	}
 
 	public function clearTable($table) {
-		$this->dbConn->query("DELETE FROM \"$table\"");
+		if($table != 'SQLiteEnums') $this->dbConn->query("DELETE FROM \"$table\"");
 	}
 
 	public function createTable($table, $fields = null, $indexes = null, $options = null, $advancedOptions = null) {
@@ -624,7 +624,6 @@ class SQLite3Database extends SS_Database {
 	protected $enum_map = array();
 	
 	public function enum($values){
-
 		$tablefield = $values['table'] . '.' . $values['name'];
 		if(empty($this->enum_map)) $this->query("CREATE TABLE IF NOT EXISTS SQLiteEnums (TableColumn TEXT PRIMARY KEY, EnumList TEXT)");
 		if(empty($this->enum_map[$tablefield]) || $this->enum_map[$tablefield] != implode(',', $values['enums'])) {
