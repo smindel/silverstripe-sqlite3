@@ -23,7 +23,7 @@ if(in_array($databaseConfig['type'], $classes)) {
 	);
 
 	// The SQLite3 class is available in PHP 5.3 and newer
-	if(class_exists('SQLite3') && $databaseConfig['type'] == 'SQLite3Database') {
+	if(class_exists('SQLite3') && $databaseConfig['type'] != 'SQLitePDODatabase') {
 		$databaseConfig['type'] = 'SQLite3Database';
 	} else {
 		$databaseConfig['type'] = 'SQLitePDODatabase';
