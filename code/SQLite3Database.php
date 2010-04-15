@@ -1223,8 +1223,8 @@ class SQLite3Query extends SS_Query {
 	public function seek($row) {
 		$this->handle->reset();
 		$i=0;
-		while($i < $row && $row = SQLite3Result::fetchArray()) $i++;
-		return (bool) $row;
+		while($i < $row && $row = @$this->handle->fetchArray()) $i++;
+		return true;
 	}
 
 	/**
@@ -1232,14 +1232,14 @@ class SQLite3Query extends SS_Query {
 	 */
 	public function numRecords() {
 		$c=0;
-		while($this->handle->fetchArray()) $c++;
+		while(@$this->handle->fetchArray()) $c++;
 		$this->handle->reset();
 		return $c;
 	}
 
 	public function nextRecord() {
 		// Coalesce rather than replace common fields.
-		if(@$data = $this->handle->fetchArray(SQLITE3_NUM)) {
+		if($data = @$this->handle->fetchArray(SQLITE3_NUM)) {
 			foreach($data as $columnIdx => $value) {
 				if(preg_match('/^"([a-z0-9_]+)"\."([a-z0-9_]+)"$/i', $this->handle->columnName($columnIdx), $matches)) $columnName = $matches[2];
 				else if(preg_match('/^"([a-z0-9_]+)"$/i', $this->handle->columnName($columnIdx), $matches)) $columnName = $matches[1];
