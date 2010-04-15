@@ -42,7 +42,7 @@ class SQLite3Database extends SS_Database {
 	 * work signifficantly different to the transactions in Postgres on which
 	 * the unit test are based upon... ;(
 	 */
-	protected $supportsTransactions=false;
+	protected $supportsTransactions=true;
 
 	/*
 	 * if we're on a In-Memory db
