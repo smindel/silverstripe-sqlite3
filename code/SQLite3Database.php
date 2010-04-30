@@ -38,13 +38,6 @@ class SQLite3Database extends SS_Database {
 	protected $parameters;
 
 	/*
-	 * Actually SQLite supports transactions (they are used below), but they
-	 * work signifficantly different to the transactions in Postgres on which
-	 * the unit test are based upon... ;(
-	 */
-	protected $supportsTransactions=true;
-
-	/*
 	 * if we're on a In-Memory db
 	 */
 	protected $lives_in_memory = false;
@@ -947,7 +940,7 @@ class SQLite3Database extends SS_Database {
 	 * Does this database support transactions?
 	 */
 	public function supportsTransactions(){
-		return $this->supportsTransactions;
+		return !($this->getVersion() < 3.6);
 	}
 
 	/*
