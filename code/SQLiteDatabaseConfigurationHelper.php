@@ -100,11 +100,17 @@ class SQLiteDatabaseConfigurationHelper implements DatabaseConfigurationHelper {
 			$error = '';
 		}
 		
-		
 		return array(
 			'success' => $success,
 			'connection' => $conn,
 			'error' => $error
+		);
+	}
+
+	public function requireDatabaseVersion($databaseConfig) {
+		return array(
+			'success' => true,
+			'error' => ''
 		);
 	}
 
