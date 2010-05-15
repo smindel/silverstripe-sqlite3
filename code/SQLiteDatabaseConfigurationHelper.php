@@ -108,9 +108,36 @@ class SQLiteDatabaseConfigurationHelper implements DatabaseConfigurationHelper {
 	}
 
 	public function requireDatabaseVersion($databaseConfig) {
+		$success = false;
+		$error = '';
+		$version = 0;
+
+		if(class_exists('SQLite3')) {
+			$info = SQLite3::version();
+			if($info && isset($info['versionString'])) {
+				$version = trim($info['versionString']);
+			}
+		} else {
+			// Fallback to using sqlite_version() query
+			$file = $databaseConfig['path'] . '/' . $databaseConfig['database'];
+			$file = preg_replace('/\/$/', '', $file);
+			$conn = @(new PDO("sqlite:$file"));
+			if($conn) {
+				$result = @$conn->query('SELECT sqlite_version()');
+				$version = $result->fetchColumn();
+			}
+		}
+
+		if($version) {
+			$success = version_compare($version, '3.3', '>=');
+			if(!$success) {
+				$error = "Your SQLite3 library version is $version. It's recommended you use at least 3.3.";
+			}
+		}
+
 		return array(
-			'success' => true,
-			'error' => ''
+			'success' => $success,
+			'error' => $error
 		);
 	}
 
