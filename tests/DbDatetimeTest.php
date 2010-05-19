@@ -48,7 +48,8 @@ class DbDatetimeTest extends FunctionalTest {
 
 			$query = 'SELECT ' . $this->adapter->formattedDatetimeClause('"Created"', '%U') . ' AS test FROM "SiteTree" WHERE "URLSegment" = \'home\'';
 			$result = DB::query($query)->value();
-			$this->matchesRoughly($result, strtotime(Dataobject::get_one('SiteTree',"\"URLSegment\" = 'home'")->Created), 'SiteTree[home]->Created as timestamp');
+
+			$this->matchesRoughly($result, strtotime(DataObject::get_one('SiteTree',"\"URLSegment\" = 'home'")->Created), 'SiteTree[home]->Created as timestamp');
 		}
 	}
 	
