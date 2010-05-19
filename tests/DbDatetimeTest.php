@@ -31,7 +31,7 @@ class DbDatetimeTest extends FunctionalTest {
 		if($this->supportDbDatetime) {
 			$query = 'SELECT ' . $this->adapter->formattedDatetimeClause('now', '%U');
 			$result = DB::query($query)->value();
-			$this->assertRegExp('/^\d*$/', $result);
+			$this->assertRegExp('/^\d*$/', (string) $result);
 			$this->assertTrue($result>0);
 		}
 	}
