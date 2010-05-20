@@ -44,6 +44,8 @@ class SQLite3Database extends SS_Database {
 
 	public static $default_pragma = array();
 
+	public static $vacuum = true;
+
 	/**
 	 * Connect to a SQLite3 database.
 	 * @param array $parameters An map of parameters, which should include:
@@ -358,8 +360,10 @@ class SQLite3Database extends SS_Database {
 			$this->alterationMessage("SQLite$class Version " . $this->query("SELECT sqlite_version()")->value(),"repaired");
 			$this->alterationMessage("Checking database integrity","repaired");
 			if($msgs = $this->query('PRAGMA integrity_check')) foreach($msgs as $msg) if($msg['integrity_check'] != 'ok') { Debug::show($msg['integrity_check']); $ok = false; }
-			$this->query('VACUUM');
-			$this->alterationMessage("VACUUMing","repaired");
+			if(self::$vacuum) {
+				$this->query('VACUUM');
+				$this->alterationMessage("VACUUMing","repaired");
+			}
 			self::$checked_and_repaired = true;
 		}
 		
