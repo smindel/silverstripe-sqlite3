@@ -107,9 +107,7 @@ class SQLiteDatabaseConfigurationHelper implements DatabaseConfigurationHelper {
 		);
 	}
 
-	public function requireDatabaseVersion($databaseConfig) {
-		$success = false;
-		$error = '';
+	public function getDatabaseVersion($databaseConfig) {
 		$version = 0;
 
 		if(class_exists('SQLite3')) {
@@ -127,6 +125,14 @@ class SQLiteDatabaseConfigurationHelper implements DatabaseConfigurationHelper {
 				$version = $result->fetchColumn();
 			}
 		}
+
+		return $version;
+	}
+
+	public function requireDatabaseVersion($databaseConfig) {
+		$success = false;
+		$error = '';
+		$version = $this->getDatabaseVersion($databaseConfig);
 
 		if($version) {
 			$success = version_compare($version, '3.3', '>=');
