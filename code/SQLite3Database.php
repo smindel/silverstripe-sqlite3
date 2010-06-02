@@ -622,7 +622,7 @@ class SQLite3Database extends SS_Database {
 	
 	public function enum($values){
 		$tablefield = $values['table'] . '.' . $values['name'];
-		if(empty($this->enum_map)) $this->query("CREATE TABLE IF NOT EXISTS SQLiteEnums (TableColumn TEXT PRIMARY KEY, EnumList TEXT)");
+		if(empty($this->enum_map)) $this->query("CREATE TABLE IF NOT EXISTS \"SQLiteEnums\" (\"TableColumn\" TEXT PRIMARY KEY, \"EnumList\" TEXT)");
 		if(empty($this->enum_map[$tablefield]) || $this->enum_map[$tablefield] != implode(',', $values['enums'])) {
 			$this->query("REPLACE INTO SQLiteEnums (TableColumn, EnumList) VALUES (\"{$tablefield}\", \"" . implode(',', $values['enums']) . "\")");
 			$this->enum_map[$tablefield] = implode(',', $values['enums']);
@@ -766,7 +766,7 @@ class SQLite3Database extends SS_Database {
 	 * Returns true if this table exists
 	 */
 	function hasTable($tableName) {
-		$SQL_table = Convert::raw2sql($table);
+		$SQL_table = Convert::raw2sql($tableName);
 		return (bool)($this->query("SELECT name FROM sqlite_master WHERE type = \"table\" AND name = \"$tableName\"")->value());
 	}
 
