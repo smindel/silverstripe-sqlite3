@@ -17,10 +17,8 @@ if(in_array($databaseConfig['type'], $classes)) {
 	 * set pragma values on the connection.
 	 * @see http://www.sqlite.org/pragma.html
 	 */
-	SQLite3Database::$default_pragma = array(
-		'encoding' => '"UTF-8"',
-		'locking_mode' => 'NORMAL',
-	);
+	SQLite3Database::$default_pragma['encoding'] = '"UTF-8"';
+	SQLite3Database::$default_pragma['locking_mode'] = 'NORMAL';
 
 	// The SQLite3 class is available in PHP 5.3 and newer
 	if(class_exists('SQLite3') && $databaseConfig['type'] != 'SQLitePDODatabase') {
