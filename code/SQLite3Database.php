@@ -362,7 +362,13 @@ class SQLite3Database extends SS_Database {
 			if($msgs = $this->query('PRAGMA integrity_check')) foreach($msgs as $msg) if($msg['integrity_check'] != 'ok') { Debug::show($msg['integrity_check']); $ok = false; }
 			if(self::$vacuum) {
 				$this->query('VACUUM', E_USER_NOTICE);
-				if(preg_match('/authoriz/', $msg = $this->dbConn->lastErrorMsg())) {
+				if($this instanceof SQLitePDODatabase) {
+					$msg = $this->dbConn->errorInfo();
+					$msg = $msg[2];
+				} else {
+					$msg = $this->dbConn->lastErrorMsg();
+				}
+				if(preg_match('/authoriz/', $msg)) {
 					$this->alterationMessage('VACUUM | ' . $msg, "error");
 				} else {
 					$this->alterationMessage("VACUUMing", "repaired");
