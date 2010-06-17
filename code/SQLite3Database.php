@@ -364,7 +364,7 @@ class SQLite3Database extends SS_Database {
 				$this->query('VACUUM', E_USER_NOTICE);
 				if($this instanceof SQLitePDODatabase) {
 					$msg = $this->dbConn->errorInfo();
-					$msg = $msg[2];
+					$msg = isset($msg[2]) ? $msg[2] : 'no errors';
 				} else {
 					$msg = $this->dbConn->lastErrorMsg();
 				}
