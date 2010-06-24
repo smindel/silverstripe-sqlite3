@@ -467,7 +467,7 @@ class SQLite3Database extends SS_Database {
 		$fieldList = array();
 
 		if($sqlCreate && $sqlCreate['sql']) {
-			preg_match('/^[\s]*CREATE[\s]+TABLE[\s]+[\'"][a-zA-Z0-9_]+[\'"][\s]*\((.+)\)[\s]*$/ims', $sqlCreate['sql'], $matches);
+			preg_match('/^[\s]*CREATE[\s]+TABLE[\s]+[\'"]?[a-zA-Z0-9_]+[\'"]?[\s]*\((.+)\)[\s]*$/ims', $sqlCreate['sql'], $matches);
 			$fields = isset($matches[1]) ? preg_split('/,(?=(?:[^\'"]*$)|(?:[^\'"]*[\'"][^\'"]*[\'"][^\'"]*)*$)/x', $matches[1]) : array();
 			foreach($fields as $field) {
 				$details = preg_split('/\s/', trim($field));
