@@ -872,8 +872,8 @@ class SQLite3Database extends SS_Database {
 	 * @return object DataObjectSet of result pages
 	 */
 	public function searchEngine($classesToSearch, $keywords, $start, $pageLength, $sortBy = "Relevance DESC", $extraFilter = "", $booleanSearch = false, $alternativeFileFilter = "", $invertedMatch = false) {
-		$fileFilter = '';           
-		$keywords = Convert::raw2sql(str_replace(array('*','+','-'),'',$keywords));
+		$fileFilter = '';
+		$keywords = Convert::raw2sql(str_replace(array('*','+','-','"','\''),'',$keywords));
 		$htmlEntityKeywords = htmlentities(utf8_decode($keywords));
 
 		$extraFilters = array('SiteTree' => '', 'File' => '');
