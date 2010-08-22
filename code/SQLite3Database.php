@@ -138,7 +138,7 @@ class SQLite3Database extends SS_Database {
 		if(!$this->sqliteVersion) {
 			$db_version=$this->query("SELECT sqlite_version()")->value();
 
-			$this->sqliteVersion = (float)$db_version;
+			$this->sqliteVersion = $db_version;
 		}
 		return $this->sqliteVersion;
 	}
