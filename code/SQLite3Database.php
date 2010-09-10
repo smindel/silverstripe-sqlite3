@@ -89,6 +89,7 @@ class SQLite3Database extends SS_Database {
 		}
 
 		$this->dbConn = new SQLite3($file, SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE, $parameters['key']);
+		if(method_exists('SQLite3', 'busyTimeout')) $this->dbConn->busyTimeout(60000);
 
 		//By virtue of getting here, the connection is active:
 		$this->active=true;
