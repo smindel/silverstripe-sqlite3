@@ -126,24 +126,13 @@ class SQLite3Database extends SS_Database {
 	}
 
 	/**
-	 * The version of SQLite3.
-	 * @var float
-	 */
-	protected $sqliteVersion;
-
-	/**
 	 * Get the version of SQLite3.
 	 * @return float
 	 */
 	public function getVersion() {
-		if(!$this->sqliteVersion) {
-			$db_version=$this->query("SELECT sqlite_version()")->value();
-
-			$this->sqliteVersion = $db_version;
-		}
-		return $this->sqliteVersion;
+		return $this->query("SELECT sqlite_version()")->value();
 	}
-    
+
 	/**
 	 * Execute PRAGMA commands.
 	 * works as getter and setter for connection params
@@ -351,14 +340,9 @@ class SQLite3Database extends SS_Database {
 	 * @return boolean Return true if the table has integrity after the method is complete.
 	 */
 	public function checkAndRepairTable($tableName = null) {
-
 		$ok = true;
 
 		if(!SapphireTest::using_temp_db() && !self::$checked_and_repaired) {
-			$class = '';
-			if(get_class($this)=="SQLitePDODatabase") $class = 'PDO';
-			if(get_class($this)=="SQLite3Database") $class = '3';
-			$this->alterationMessage("SQLite$class Version " . $this->query("SELECT sqlite_version()")->value(),"repaired");
 			$this->alterationMessage("Checking database integrity","repaired");
 			if($msgs = $this->query('PRAGMA integrity_check')) foreach($msgs as $msg) if($msg['integrity_check'] != 'ok') { Debug::show($msg['integrity_check']); $ok = false; }
 			if(self::$vacuum) {
