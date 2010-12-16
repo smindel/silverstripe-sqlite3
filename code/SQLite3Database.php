@@ -542,7 +542,7 @@ class SQLite3Database extends SS_Database {
 		foreach($this->query('SELECT name FROM sqlite_master WHERE type = "table"') as $record) {
 			//$table = strtolower(reset($record));
 			$table = reset($record);
-			$tables[$table] = $table;
+			$tables[strtolower($table)] = $table;
 		}
 
 		//Return an empty array if there's nothing in this database
