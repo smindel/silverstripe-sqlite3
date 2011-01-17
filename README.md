@@ -25,18 +25,39 @@ you are done!
 make sure the webserver has sufficient privileges to write to that folder and that it is protected from external access.
 
 
+Sample mysite/_config.php
+-------------------------
+
+	<?php
+
+	global $project;
+	$project = 'mysite';
+
+	global $database;
+	$database = 'SS_mysite';
+
+	require_once("conf/ConfigureFromEnv.php");
+
+	global $databaseConfig;
+
+	$databaseConfig = array(
+		"type" => 'SQLiteDatabase',
+		"server" => 'none',
+		"username" => 'none',
+		"password" => 'none',
+		"database" => $database,
+		"path" => "/path/to/my/database/file",
+	);
+
+	SSViewer::set_theme('blackcandy');
+	SiteTree::enable_nested_urls();
+
+Again: make sure that the webserver has permission to read and write to the above path (/path/to/my/database/, 'file' would be the name of the sqlite db file)
+
 URL parameter
 -------------
-If you're trying change a field constrain to NOT NULL on a field that contains NULLs it aborts the action because it might corrupt existing records. In order to perform the action anyway add the URL parameter 'avoidConflict' when running dev/build which temporarily adds a conflict clause to the field spec.
+If you're trying to change a field constrain to NOT NULL on a field that contains NULLs dev/build fails because it might corrupt existing records. In order to perform the action anyway add the URL parameter 'avoidConflict' when running dev/build which temporarily adds a conflict clause to the field spec.
 E.g.: http://www.my-project.com/?avoidConflict=1
-
-Tested stacks
--------------
-OSX leopard, XAMPP with PHP 5.3.0, SQLite3.6.3
-OSX leopard, MAMP with PHP 5.2.6, SQLite3.3.7
-Ubuntu, PHP 5.2.4, SQLite3.4.2
-WinXP, XAMPP with PHP 5.3.0, SQLite3.6.16
-
 
 Open Issues
 -----------
