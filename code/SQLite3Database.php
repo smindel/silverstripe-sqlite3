@@ -1007,6 +1007,18 @@ class SQLite3Database extends SS_Database {
 	}
 
 	/**
+	 *
+	 * This is a stub function.  Postgres caches the fieldlist results.
+	 *
+	 * @param string $tableName
+	 *
+	 * @return boolean
+	 */
+	function clear_cached_fieldlist($tableName=false){
+		return true;
+	}
+
+	/**
 	 * Convert a SQLQuery object into a SQL statement
 	 */
 	public function sqlQueryToString(SQLQuery $sqlQuery) {
