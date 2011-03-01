@@ -960,7 +960,7 @@ class SQLite3Database extends SS_Database {
 	/*
 	 * Start a prepared transaction
 	 */
-	public function startTransaction($transaction_mode=false, $session_characteristics=false){
+	public function transactionStart($transaction_mode=false, $session_characteristics=false){
 		DB::query('BEGIN');
 	}
 
@@ -988,7 +988,7 @@ class SQLite3Database extends SS_Database {
 	/*
 	 * Commit everything inside this transaction so far
 	 */
-	public function endTransaction(){
+	public function transactionEnd(){
 		DB::query('COMMIT;');
 	}
 
