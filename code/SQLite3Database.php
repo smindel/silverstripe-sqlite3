@@ -956,11 +956,18 @@ class SQLite3Database extends SS_Database {
 		else
 			return false;
 	}
+	
+	/**
+	 * @deprecated 1.2 use transactionStart() (method required for 2.4.x)
+	 */
+	public function startTransaction($transaction_mode=false, $session_characteristics=false){
+		$this->transactionStart($transaction_mode, $session_characteristics);
+	}
 
 	/*
 	 * Start a prepared transaction
 	 */
-	public function startTransaction($transaction_mode=false, $session_characteristics=false){
+	public function transactionStart($transaction_mode=false, $session_characteristics=false){
 		DB::query('BEGIN');
 	}
 
@@ -985,10 +992,17 @@ class SQLite3Database extends SS_Database {
 		}
 	}
 
+	/**
+	 * @deprecated 1.2 use transactionEnd() (method required for 2.4.x)
+	 */
+	public function endTransaction(){
+		$this->transactionEnd();
+	}
+	
 	/*
 	 * Commit everything inside this transaction so far
 	 */
-	public function endTransaction(){
+	public function transactionEnd(){
 		DB::query('COMMIT;');
 	}
 
