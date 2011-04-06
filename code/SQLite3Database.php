@@ -939,7 +939,7 @@ class SQLite3Database extends SS_Database {
 	 * Does this database support transactions?
 	 */
 	public function supportsTransactions(){
-		return !($this->getVersion() < 3.6);
+		return version_compare($this->getVersion(), '3.6', '>=');
 	}
 
 	/*
