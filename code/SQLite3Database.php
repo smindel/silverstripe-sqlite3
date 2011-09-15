@@ -962,7 +962,7 @@ class SQLite3Database extends SS_Database {
 		else
 			return false;
 	}
-	
+
 	/**
 	 * @deprecated 1.2 use transactionStart() (method required for 2.4.x)
 	 */
@@ -1004,7 +1004,7 @@ class SQLite3Database extends SS_Database {
 	public function endTransaction(){
 		$this->transactionEnd();
 	}
-	
+
 	/*
 	 * Commit everything inside this transaction so far
 	 */
@@ -1013,9 +1013,22 @@ class SQLite3Database extends SS_Database {
 	}
 
 	/**
+	 *
+	 * This is a stub function.  Postgres caches the fieldlist results.
+	 *
+	 * @param string $tableName
+	 *
+	 * @return boolean
+	 */
+	function clear_cached_fieldlist($tableName=false){
+		return true;
+	}
+
+	/**
 	 * Convert a SQLQuery object into a SQL statement
 	 */
 	public function sqlQueryToString(SQLQuery $sqlQuery) {
+		if (!$sqlQuery->from) return '';
 		$distinct = $sqlQuery->distinct ? "DISTINCT " : "";
 		if($sqlQuery->delete) {
 			$text = "DELETE ";
