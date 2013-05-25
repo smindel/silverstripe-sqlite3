@@ -29,6 +29,7 @@ class SQLiteDatabaseConfigurationHelper implements DatabaseConfigurationHelper {
 	 */
 	public function requireDatabaseServer($databaseConfig) {
 		$path = $databaseConfig['path'];
+		$error = null;
 		
 		if(!$path) {
 			$success = false;
